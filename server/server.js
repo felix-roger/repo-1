@@ -8,7 +8,7 @@ const { WebSocketServer, WebSocket } = require('ws');
 const TOTAL_ROUNDS = 5;
 const MAX_WORD_SETS = 3;
 const ENTRY_TIME_SECONDS = 180;
-const GUESS_TIME_SECONDS = 30;
+const GUESS_SECONDS_PER_WORD = 5;
 const TIMEOUT_GRACE_MS = 5000;
 const PHRASE_PATTERN = /^[A-Za-z'-]+$/;
 
@@ -91,7 +91,7 @@ function createRoom() {
     entry: null,
     guess: null,
     entryTimer: null,
-    guessTimer: null,
+    guessTimers: { player1: null, player2: null },
     advancing: false
   };
   rooms.set(code, room);
@@ -139,35 +139,37 @@ function startGuessPhase(room) {
   room.phase = 'guess';
   room.guess = {
     player1: { submitted: false, guesses: [] },
-    player2: { submitted: false, guesses: [] },
-    endsAt: Date.now() + GUESS_TIME_SECONDS * 1000
+    player2: { submitted: false, guesses: [] }
   };
-  clearTimeout(room.guessTimer);
-  room.guessTimer = setTimeout(() => forceFinalizeGuess(room), GUESS_TIME_SECONDS * 1000 + TIMEOUT_GRACE_MS);
 
-  broadcast(room, 'start_guess', (slot) => ({
-    round: room.currentRound,
-    endsAt: room.guess.endsAt,
-    opponentName: room.players[otherSlot(slot)].name,
-    firstWords: room.entry[otherSlot(slot)].wordSets.map((w) => w.first)
-  }));
+  ['player1', 'player2'].forEach((slot) => {
+    const wordCount = room.entry[otherSlot(slot)].wordSets.length;
+    const durationMs = wordCount * GUESS_SECONDS_PER_WORD * 1000;
+
+    clearTimeout(room.guessTimers[slot]);
+    room.guessTimers[slot] = setTimeout(() => forceFinalizeGuessSlot(room, slot), durationMs + TIMEOUT_GRACE_MS);
+
+    send(room.players[slot].ws, 'start_guess', {
+      round: room.currentRound,
+      secondsPerWord: GUESS_SECONDS_PER_WORD,
+      opponentName: room.players[otherSlot(slot)].name,
+      firstWords: room.entry[otherSlot(slot)].wordSets.map((w) => w.first)
+    });
+  });
 }
 
-function forceFinalizeGuess(room) {
-  if (room.phase !== 'guess') return;
-  ['player1', 'player2'].forEach((slot) => {
-    if (!room.guess[slot].submitted) {
-      room.guess[slot].submitted = true;
-      room.guess[slot].guesses = [];
-    }
-  });
+function forceFinalizeGuessSlot(room, slot) {
+  if (room.phase !== 'guess' || room.guess[slot].submitted) return;
+  room.guess[slot].submitted = true;
+  room.guess[slot].guesses = [];
   maybeComputeResults(room);
 }
 
 function maybeComputeResults(room) {
   if (room.phase !== 'guess') return;
   if (!room.guess.player1.submitted || !room.guess.player2.submitted) return;
-  clearTimeout(room.guessTimer);
+  clearTimeout(room.guessTimers.player1);
+  clearTimeout(room.guessTimers.player2);
   computeRoundResults(room);
 }
 
@@ -183,8 +185,9 @@ function computeRoundResults(room) {
     results.player2.push({ guess, correct: guess.length > 0 && guess === phrase.second });
   });
 
-  room.scores.player1 += results.player1.filter((r) => r.correct).length;
-  room.scores.player2 += results.player2.filter((r) => r.correct).length;
+  // A correct guess awards the point to the phrase's owner, not the guesser.
+  room.scores.player2 += results.player1.filter((r) => r.correct).length;
+  room.scores.player1 += results.player2.filter((r) => r.correct).length;
   room.phase = 'summary';
   room.advancing = false;
 
@@ -234,7 +237,8 @@ function handleResetScores(room) {
 
 function cleanupRoom(room) {
   clearTimeout(room.entryTimer);
-  clearTimeout(room.guessTimer);
+  clearTimeout(room.guessTimers.player1);
+  clearTimeout(room.guessTimers.player2);
   rooms.delete(room.code);
 }
 

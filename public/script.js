@@ -8,7 +8,7 @@
    ============================================================ */
 
 const MAX_WORD_SETS = 3;
-const CLOCK_URGENT_THRESHOLD = 10;
+const CLOCK_URGENT_THRESHOLD = 2;
 const PHRASE_PATTERN = /^[A-Za-z'-]+$/;
 
 /* ------------------------------------------------------------
@@ -25,6 +25,10 @@ let scores = { player1: 0, player2: 0 };
 let names = { player1: 'Player 1', player2: 'Player 2' };
 let entryLocked = false;
 let guessLocked = false;
+let guessFirstWords = [];
+let guessAnswers = [];
+let guessWordIndex = 0;
+let guessSecondsPerWord = 5;
 
 let timerInterval = null;
 
@@ -85,8 +89,10 @@ const el = {
   guessHudP1: document.getElementById('guess-hud-p1'),
   guessHudP2: document.getElementById('guess-hud-p2'),
   guessOwnerName: document.getElementById('guess-owner-name'),
+  guessWordProgress: document.getElementById('guess-word-progress'),
   guessForm: document.getElementById('guess-form'),
   guessGrid: document.getElementById('guess-grid'),
+  guessSubmitBtn: document.getElementById('guess-submit-btn'),
 
   // Summary
   summaryRoundIndicator: document.getElementById('summary-round-indicator'),
@@ -389,11 +395,46 @@ function onStartEntry(msg) {
 
 function onStartGuess(msg) {
   guessLocked = false;
+  guessFirstWords = msg.firstWords;
+  guessAnswers = guessFirstWords.map(() => '');
+  guessWordIndex = 0;
+  guessSecondsPerWord = msg.secondsPerWord || 5;
+
   el.guessOwnerName.textContent = `${msg.opponentName}'s`;
-  renderGuessGrid(msg.firstWords);
   updateHud(el.guessHudRound, el.guessHudP1, el.guessHudP2);
   showScreen('guess');
-  startCountdownUntil(msg.endsAt, el.guessClock, () => finalizeGuesses());
+
+  if (guessFirstWords.length === 0) {
+    finalizeGuesses();
+    return;
+  }
+
+  showCurrentGuessWord();
+}
+
+/** Renders the single word currently being guessed and starts its own short countdown. */
+function showCurrentGuessWord() {
+  el.guessWordProgress.textContent = `Word ${guessWordIndex + 1} of ${guessFirstWords.length}`;
+  el.guessSubmitBtn.textContent = guessWordIndex < guessFirstWords.length - 1 ? 'Next Word' : 'Submit Final Guess';
+
+  renderGuessGrid(guessFirstWords[guessWordIndex], guessWordIndex);
+
+  const endsAt = Date.now() + guessSecondsPerWord * 1000;
+  startCountdownUntil(endsAt, el.guessClock, () => advanceGuessWord());
+}
+
+/** Captures the current input, then moves to the next word or finalizes on the last one. */
+function advanceGuessWord() {
+  const input = el.guessGrid.querySelector('.guess-row-input');
+  guessAnswers[guessWordIndex] = input ? normalizeWhitespace(input.value) : '';
+  clearCountdown();
+
+  if (guessWordIndex < guessFirstWords.length - 1) {
+    guessWordIndex += 1;
+    showCurrentGuessWord();
+  } else {
+    finalizeGuesses();
+  }
 }
 
 function onRoundSummary(msg) {
@@ -532,69 +573,67 @@ function finalizeEntry(fromTimeout) {
    Guess phase
    ------------------------------------------------------------ */
 
-function renderGuessGrid(firstWords) {
+/** Renders a single guess row for one word (index `idx` in the overall firstWords list). */
+function renderGuessGrid(word, idx) {
   el.guessGrid.innerHTML = '';
 
-  firstWords.forEach((word, idx) => {
-    const row = document.createElement('div');
-    row.className = 'guess-row';
+  const row = document.createElement('div');
+  row.className = 'guess-row';
 
-    const label = document.createElement('div');
-    label.className = 'guess-word-label';
-    label.textContent = `${toTitleCase(word)} `;
-    const blank = document.createElement('span');
-    blank.className = 'blank';
-    blank.textContent = '______';
-    label.appendChild(blank);
+  const label = document.createElement('div');
+  label.className = 'guess-word-label';
+  label.textContent = `${toTitleCase(word)} `;
+  const blank = document.createElement('span');
+  blank.className = 'blank';
+  blank.textContent = '______';
+  label.appendChild(blank);
 
-    const inputId = `guess-input-${idx}`;
-    const srLabel = document.createElement('label');
-    srLabel.className = 'sr-only';
-    srLabel.setAttribute('for', inputId);
-    srLabel.textContent = `Guess for word set ${idx + 1}`;
+  const inputId = `guess-input-${idx}`;
+  const srLabel = document.createElement('label');
+  srLabel.className = 'sr-only';
+  srLabel.setAttribute('for', inputId);
+  srLabel.textContent = `Guess for word set ${idx + 1}`;
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.id = inputId;
-    input.className = 'guess-row-input';
-    input.dataset.index = String(idx);
-    input.autocomplete = 'off';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = inputId;
+  input.className = 'guess-row-input';
+  input.dataset.index = String(idx);
+  input.autocomplete = 'off';
 
-    const inputWrap = document.createElement('div');
-    inputWrap.className = 'input-with-mic';
+  const inputWrap = document.createElement('div');
+  inputWrap.className = 'input-with-mic';
 
-    const micBtn = document.createElement('button');
-    micBtn.type = 'button';
-    micBtn.className = 'mic-btn';
-    micBtn.textContent = '🎤';
-    micBtn.setAttribute('aria-label', `Speak guess for word set ${idx + 1}`);
-    if (!VOICE_SUPPORTED) {
-      micBtn.disabled = true;
-      micBtn.title = 'Voice input is not supported in this browser.';
-    } else {
-      micBtn.addEventListener('click', () => speakWordInto(input, micBtn));
-    }
+  const micBtn = document.createElement('button');
+  micBtn.type = 'button';
+  micBtn.className = 'mic-btn';
+  micBtn.textContent = '🎤';
+  micBtn.setAttribute('aria-label', `Speak guess for word set ${idx + 1}`);
+  if (!VOICE_SUPPORTED) {
+    micBtn.disabled = true;
+    micBtn.title = 'Voice input is not supported in this browser.';
+  } else {
+    micBtn.addEventListener('click', () => speakWordInto(input, micBtn));
+  }
 
-    inputWrap.appendChild(srLabel);
-    inputWrap.appendChild(input);
-    inputWrap.appendChild(micBtn);
+  inputWrap.appendChild(srLabel);
+  inputWrap.appendChild(input);
+  inputWrap.appendChild(micBtn);
 
-    row.appendChild(label);
-    row.appendChild(inputWrap);
-    el.guessGrid.appendChild(row);
-  });
+  row.appendChild(label);
+  row.appendChild(inputWrap);
+  el.guessGrid.appendChild(row);
+
+  requestAnimationFrame(() => input.focus());
 }
 
-/** Takes whatever is currently typed (blank guesses count as incorrect) and sends it. */
+/** Sends whatever was captured for each word (blank guesses count as incorrect). */
 function finalizeGuesses() {
   if (guessLocked) return;
   guessLocked = true;
   clearCountdown();
 
-  const inputs = Array.from(el.guessGrid.querySelectorAll('.guess-row-input'));
-  const guesses = inputs.map((input) => normalizeWhitespace(input.value));
-
-  sendMessage('submit_guess', { guesses });
+  sendMessage('submit_guess', { guesses: guessAnswers });
 
   el.waitingTitle.textContent = 'Guesses Submitted';
   el.waitingRoomCodeBox.hidden = true;
@@ -735,7 +774,7 @@ el.entryForm.addEventListener('submit', (e) => {
 
 el.guessForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  finalizeGuesses();
+  advanceGuessWord();
 });
 
 el.btnNextRound.addEventListener('click', () => {

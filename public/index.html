@@ -139,7 +139,7 @@
   <!-- GUESS SCREEN -->
   <section id="screen-guess" class="screen" aria-labelledby="guess-title">
     <div class="game-hud">
-      <div class="hud-clock" id="guess-clock">Clock : 00:30</div>
+      <div class="hud-clock" id="guess-clock">Clock : 00:05</div>
       <div class="hud-score" aria-label="Scoreboard">
         <span class="hud-score-title">Score</span>
         <span class="hud-round" id="guess-hud-round">Round 1</span>
@@ -149,11 +149,12 @@
     </div>
     <div class="card">
       <h2 id="guess-title" class="screen-title">Guess <span id="guess-owner-name">your opponent's</span> phrases</h2>
-      <p class="hint">They entered these phrases:</p>
+      <span class="round-indicator-pill" id="guess-word-progress">Word 1 of 3</span>
+      <p class="hint">You have 5 seconds to guess each word.</p>
 
       <form id="guess-form" novalidate>
         <div class="guess-list" id="guess-grid"></div>
-        <button type="submit" class="btn btn-primary btn-full">Submit Guesses</button>
+        <button type="submit" class="btn btn-primary btn-full" id="guess-submit-btn">Next Word</button>
       </form>
     </div>
   </section>
@@ -171,7 +172,7 @@
             <div class="summary-phrase-lines" id="summary-p1-phrases"></div>
           </div>
           <div class="summary-guess-col">
-            <span class="summary-label">Correct Phrases</span>
+            <span class="summary-label">Entered Phrase</span>
             <ol class="summary-guess-numbered" id="summary-p1-guesses"></ol>
             <p class="summary-guess-caption" id="summary-p1-guess-caption"></p>
           </div>
@@ -182,7 +183,7 @@
             <div class="summary-phrase-lines" id="summary-p2-phrases"></div>
           </div>
           <div class="summary-guess-col">
-            <span class="summary-label">Correct Phrases</span>
+            <span class="summary-label">Entered Phrase</span>
             <ol class="summary-guess-numbered" id="summary-p2-guesses"></ol>
             <p class="summary-guess-caption" id="summary-p2-guess-caption"></p>
           </div>
@@ -257,7 +258,7 @@
       <li>Both players secretly enter up to three two-word phrases at the same time. The second word of each is typed into a hidden password field.</li>
       <li>Only the first word of each phrase is shown to your opponent.</li>
       <li>Both players then simultaneously try to guess each other's hidden second words.</li>
-      <li>Each correct guess earns 1 point (up to 3 points per round). A full game is 5 rounds.</li>
+      <li>Each phrase that gets correctly guessed earns its owner 1 point (up to 3 points per round) — so a phrase that's too easy to guess costs you. A full game is 5 rounds.</li>
       <li>After 5 rounds, the player with the higher score wins!</li>
     </ol>
     <button class="btn btn-primary btn-full" id="btn-close-how-to-play">Got It</button>
