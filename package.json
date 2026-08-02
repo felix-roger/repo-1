@@ -1,0 +1,16 @@
+{
+  "name": "the-final-word",
+  "version": "1.0.0",
+  "description": "THE FINAL WORD - a two-player word guessing duel, playable over the internet.",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}

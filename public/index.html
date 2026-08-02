@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>THE FINAL WORD</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app" class="app">
+
+  <!-- HOME / LANDING SCREEN -->
+  <section id="screen-home" class="screen active" aria-labelledby="home-title">
+    <div class="card home-card">
+      <h1 id="home-title" class="title">THE FINAL WORD</h1>
+      <p class="subtitle">A two-player word guessing duel, played live over the internet</p>
+
+      <div class="button-stack">
+        <button class="btn btn-primary" id="btn-show-create">Create Game</button>
+        <button class="btn btn-secondary" id="btn-show-join">Join Game</button>
+        <button class="btn btn-tertiary" id="btn-how-to-play">How to Play</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CREATE GAME SCREEN -->
+  <section id="screen-create" class="screen" aria-labelledby="create-title">
+    <div class="card">
+      <h2 id="create-title" class="screen-title">Create a Game</h2>
+      <p class="hint">Pick a name. You'll get a room code to share with your opponent.</p>
+
+      <form id="create-form" novalidate>
+        <div class="field">
+          <label for="create-name">Your Name</label>
+          <input type="text" id="create-name" autocomplete="off" maxlength="20" placeholder="Your name" />
+        </div>
+        <p id="create-error" class="error-message" role="alert" aria-live="polite"></p>
+        <button type="submit" class="btn btn-primary btn-full">Create Game</button>
+        <button type="button" class="btn btn-tertiary btn-full" id="btn-create-back">Back</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- JOIN GAME SCREEN -->
+  <section id="screen-join" class="screen" aria-labelledby="join-title">
+    <div class="card">
+      <h2 id="join-title" class="screen-title">Join a Game</h2>
+      <p class="hint">Enter your name and the room code your opponent shared with you.</p>
+
+      <form id="join-form" novalidate>
+        <div class="field">
+          <label for="join-name">Your Name</label>
+          <input type="text" id="join-name" autocomplete="off" maxlength="20" placeholder="Your name" />
+        </div>
+        <div class="field">
+          <label for="join-code">Room Code</label>
+          <input type="text" id="join-code" autocomplete="off" maxlength="4" placeholder="ABCD" class="room-code-input" />
+        </div>
+        <p id="join-error" class="error-message" role="alert" aria-live="polite"></p>
+        <button type="submit" class="btn btn-primary btn-full">Join Game</button>
+        <button type="button" class="btn btn-tertiary btn-full" id="btn-join-back">Back</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- WAITING SCREEN (reused for: waiting for opponent to join / finish entry / finish guessing / advance) -->
+  <section id="screen-waiting" class="screen" aria-labelledby="waiting-title">
+    <div class="card handoff-card">
+      <div class="handoff-icon" aria-hidden="true">⏳</div>
+      <h2 id="waiting-title" class="screen-title">Waiting for Opponent</h2>
+      <div class="room-code-display" id="waiting-room-code-box" hidden>
+        <span class="room-code-label">Room Code</span>
+        <span class="room-code-value" id="waiting-room-code"></span>
+      </div>
+      <p class="hint" id="waiting-message">Hang tight...</p>
+    </div>
+  </section>
+
+  <!-- ENTRY SCREEN (timed, 3 word sets) -->
+  <section id="screen-entry" class="screen" aria-labelledby="entry-title">
+    <div class="game-hud">
+      <div class="hud-clock" id="entry-clock">Clock : 03:00</div>
+      <div class="hud-score" aria-label="Scoreboard">
+        <span class="hud-score-title">Score</span>
+        <span class="hud-round" id="entry-hud-round">Round 1</span>
+        <span class="hud-player-line" id="entry-hud-p1">Player 1 : 0</span>
+        <span class="hud-player-line" id="entry-hud-p2">Player 2 : 0</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2 id="entry-title" class="screen-title">Enter your secret phrases</h2>
+      <p class="hint">Enter up to three two-word phrases. Only the first word of each will be shown to your opponent. Submit anytime, or the clock will submit for you.</p>
+
+      <form id="entry-form" novalidate>
+        <div class="entry-grid" id="entry-grid">
+          <div class="entry-row" data-row="0">
+            <div class="input-with-mic">
+              <label class="sr-only" for="entry-first-0">First word, phrase 1</label>
+              <input type="text" class="entry-first-input" id="entry-first-0" data-row="0" autocomplete="off" placeholder="First word" />
+              <button type="button" class="mic-btn" data-target="entry-first-0" aria-label="Speak first word, phrase 1">🎤</button>
+            </div>
+            <div class="input-with-mic">
+              <label class="sr-only" for="entry-second-0">Second word, phrase 1</label>
+              <input type="password" class="entry-second-input" id="entry-second-0" data-row="0" autocomplete="off" placeholder="Second word" />
+              <button type="button" class="mic-btn" data-target="entry-second-0" aria-label="Speak second word, phrase 1">🎤</button>
+            </div>
+          </div>
+          <div class="entry-row" data-row="1">
+            <div class="input-with-mic">
+              <label class="sr-only" for="entry-first-1">First word, phrase 2</label>
+              <input type="text" class="entry-first-input" id="entry-first-1" data-row="1" autocomplete="off" placeholder="First word" />
+              <button type="button" class="mic-btn" data-target="entry-first-1" aria-label="Speak first word, phrase 2">🎤</button>
+            </div>
+            <div class="input-with-mic">
+              <label class="sr-only" for="entry-second-1">Second word, phrase 2</label>
+              <input type="password" class="entry-second-input" id="entry-second-1" data-row="1" autocomplete="off" placeholder="Second word" />
+              <button type="button" class="mic-btn" data-target="entry-second-1" aria-label="Speak second word, phrase 2">🎤</button>
+            </div>
+          </div>
+          <div class="entry-row" data-row="2">
+            <div class="input-with-mic">
+              <label class="sr-only" for="entry-first-2">First word, phrase 3</label>
+              <input type="text" class="entry-first-input" id="entry-first-2" data-row="2" autocomplete="off" placeholder="First word" />
+              <button type="button" class="mic-btn" data-target="entry-first-2" aria-label="Speak first word, phrase 3">🎤</button>
+            </div>
+            <div class="input-with-mic">
+              <label class="sr-only" for="entry-second-2">Second word, phrase 3</label>
+              <input type="password" class="entry-second-input" id="entry-second-2" data-row="2" autocomplete="off" placeholder="Second word" />
+              <button type="button" class="mic-btn" data-target="entry-second-2" aria-label="Speak second word, phrase 3">🎤</button>
+            </div>
+          </div>
+        </div>
+        <p id="entry-error" class="error-message" role="alert" aria-live="polite"></p>
+        <button type="submit" class="btn btn-primary btn-full">Submit</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- GUESS SCREEN -->
+  <section id="screen-guess" class="screen" aria-labelledby="guess-title">
+    <div class="game-hud">
+      <div class="hud-clock" id="guess-clock">Clock : 00:30</div>
+      <div class="hud-score" aria-label="Scoreboard">
+        <span class="hud-score-title">Score</span>
+        <span class="hud-round" id="guess-hud-round">Round 1</span>
+        <span class="hud-player-line" id="guess-hud-p1">Player 1 : 0</span>
+        <span class="hud-player-line" id="guess-hud-p2">Player 2 : 0</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2 id="guess-title" class="screen-title">Guess <span id="guess-owner-name">your opponent's</span> phrases</h2>
+      <p class="hint">They entered these phrases:</p>
+
+      <form id="guess-form" novalidate>
+        <div class="guess-list" id="guess-grid"></div>
+        <button type="submit" class="btn btn-primary btn-full">Submit Guesses</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ROUND SUMMARY SCREEN -->
+  <section id="screen-summary" class="screen" aria-labelledby="summary-title">
+    <div class="card">
+      <h2 id="summary-title" class="screen-title">Round Complete</h2>
+      <span class="round-indicator-pill" id="summary-round-indicator">Round 1 of 5</span>
+
+      <div class="summary-phrases">
+        <div class="summary-phrase-box">
+          <div class="summary-phrase-col">
+            <span class="summary-label" id="summary-p1-label">Player 1 Phrases</span>
+            <div class="summary-phrase-lines" id="summary-p1-phrases"></div>
+          </div>
+          <div class="summary-guess-col">
+            <span class="summary-label">Correct Phrases</span>
+            <ol class="summary-guess-numbered" id="summary-p1-guesses"></ol>
+            <p class="summary-guess-caption" id="summary-p1-guess-caption"></p>
+          </div>
+        </div>
+        <div class="summary-phrase-box">
+          <div class="summary-phrase-col">
+            <span class="summary-label" id="summary-p2-label">Player 2 Phrases</span>
+            <div class="summary-phrase-lines" id="summary-p2-phrases"></div>
+          </div>
+          <div class="summary-guess-col">
+            <span class="summary-label">Correct Phrases</span>
+            <ol class="summary-guess-numbered" id="summary-p2-guesses"></ol>
+            <p class="summary-guess-caption" id="summary-p2-guess-caption"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-scoreboard">
+        <h3>Updated Scoreboard</h3>
+        <div class="scoreboard">
+          <div class="score-box">
+            <span class="score-label" id="summary-score-label-p1">Player 1</span>
+            <span class="score-value" id="summary-score-p1">0</span>
+          </div>
+          <div class="score-divider">vs</div>
+          <div class="score-box">
+            <span class="score-label" id="summary-score-label-p2">Player 2</span>
+            <span class="score-value" id="summary-score-p2">0</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="btn-next-round">Continue to Next Round</button>
+    </div>
+  </section>
+
+  <!-- GAME OVER SCREEN -->
+  <section id="screen-gameover" class="screen" aria-labelledby="gameover-title">
+    <div class="card">
+      <h1 id="gameover-title" class="title small-title">Game Over</h1>
+      <div class="celebration" id="celebration" aria-hidden="true"></div>
+
+      <div class="scoreboard final-scoreboard">
+        <div class="score-box" id="final-score-p1-box">
+          <span class="score-label" id="final-label-p1">Player 1</span>
+          <span class="score-value" id="final-score-p1">0</span>
+        </div>
+        <div class="score-divider">vs</div>
+        <div class="score-box" id="final-score-p2-box">
+          <span class="score-label" id="final-label-p2">Player 2</span>
+          <span class="score-value" id="final-score-p2">0</span>
+        </div>
+      </div>
+
+      <p class="winner-announcement" id="winner-announcement">Player 1 Wins!</p>
+
+      <div class="button-stack">
+        <button class="btn btn-primary" id="btn-play-again">Play Again</button>
+        <button class="btn btn-secondary" id="btn-gameover-reset">Reset Scores</button>
+        <button class="btn btn-tertiary" id="btn-gameover-home">Home</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONNECTION LOST SCREEN -->
+  <section id="screen-connection-lost" class="screen" aria-labelledby="connection-lost-title">
+    <div class="card handoff-card">
+      <div class="handoff-icon" aria-hidden="true">⚠️</div>
+      <h2 id="connection-lost-title" class="screen-title">Connection Lost</h2>
+      <p class="hint" id="connection-lost-message">Your opponent disconnected, or the connection was lost.</p>
+      <button class="btn btn-primary btn-full" id="btn-connection-lost-home">Back to Home</button>
+    </div>
+  </section>
+
+</div>
+
+<!-- HOW TO PLAY MODAL -->
+<div id="modal-how-to-play" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="how-to-play-title" hidden>
+  <div class="modal">
+    <h2 id="how-to-play-title">How to Play</h2>
+    <ol class="how-to-list">
+      <li>Create a game to get a room code, or join with a code your opponent shared.</li>
+      <li>Both players secretly enter up to three two-word phrases at the same time. The second word of each is typed into a hidden password field.</li>
+      <li>Only the first word of each phrase is shown to your opponent.</li>
+      <li>Both players then simultaneously try to guess each other's hidden second words.</li>
+      <li>Each correct guess earns 1 point (up to 3 points per round). A full game is 5 rounds.</li>
+      <li>After 5 rounds, the player with the higher score wins!</li>
+    </ol>
+    <button class="btn btn-primary btn-full" id="btn-close-how-to-play">Got It</button>
+  </div>
+</div>
+
+<!-- CONFIRM RESET MODAL -->
+<div id="modal-confirm-reset" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-reset-title" hidden>
+  <div class="modal">
+    <h2 id="confirm-reset-title">Reset Scores?</h2>
+    <p>This will reset both players' scores to zero. This cannot be undone.</p>
+    <div class="modal-buttons">
+      <button class="btn btn-tertiary" id="btn-cancel-reset">Cancel</button>
+      <button class="btn btn-danger" id="btn-confirm-reset">Reset Scores</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
