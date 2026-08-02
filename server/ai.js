@@ -95,6 +95,10 @@ async function generateAIPhrases(difficulty, avoidPhrases) {
     const parsed = extractJson(text);
     const cleaned = sanitizeWordSets(parsed);
 
+    console.log(`[ai] LIVE phrases (${difficulty}) — prompt: ${prompt}`);
+    console.log(`[ai] LIVE phrases (${difficulty}) — raw response: ${text}`);
+    console.log(`[ai] LIVE phrases (${difficulty}) — used:`, cleaned);
+
     return cleaned.length > 0 ? cleaned : fallbackPhrases(MAX_WORD_SETS);
   } catch (err) {
     console.warn('[ai] generateAIPhrases failed, using fallback:', err.message);
@@ -135,11 +139,17 @@ async function generateAIGuesses(firstWords, difficulty) {
     const parsed = extractJson(text);
     if (!Array.isArray(parsed)) throw new Error('AI guess response was not an array');
 
-    return firstWords.map((_, idx) => {
+    const gated = firstWords.map((_, idx) => {
       const guess = normalizeWhitespace(String(parsed[idx] || ''));
       if (!guess) return '';
       return Math.random() < acceptProbability ? guess : '';
     });
+
+    console.log(`[ai] LIVE guesses (${difficulty}) — prompt: ${prompt}`);
+    console.log(`[ai] LIVE guesses (${difficulty}) — raw response: ${text}`);
+    console.log(`[ai] LIVE guesses (${difficulty}) — Claude's real guesses:`, parsed, '— after difficulty gate:', gated);
+
+    return gated;
   } catch (err) {
     console.warn('[ai] generateAIGuesses failed, using fallback:', err.message);
     return firstWords.map(() => '');
