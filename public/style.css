@@ -263,12 +263,31 @@ a:focus-visible {
   margin-bottom: 18px;
 }
 
-.field label {
+.field label,
+.field > span {
   display: block;
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-muted);
   margin-bottom: 6px;
+}
+
+/* ---------- Difficulty selector (Play with AI) ---------- */
+.difficulty-row {
+  display: flex;
+  gap: 10px;
+}
+
+.difficulty-btn {
+  flex: 1;
+  padding: 12px 10px;
+  font-size: 0.95rem;
+}
+
+.difficulty-btn.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(109, 40, 217, 0.35);
 }
 
 .field input {

@@ -28,7 +28,8 @@ let guessLocked = false;
 let guessFirstWords = [];
 let guessAnswers = [];
 let guessWordIndex = 0;
-let guessSecondsPerWord = 5;
+let guessSecondsPerWord = 10;
+let selectedDifficulty = 'medium';
 
 let timerInterval = null;
 
@@ -40,6 +41,7 @@ const screens = {
   home: document.getElementById('screen-home'),
   create: document.getElementById('screen-create'),
   join: document.getElementById('screen-join'),
+  aiSetup: document.getElementById('screen-ai-setup'),
   waiting: document.getElementById('screen-waiting'),
   entry: document.getElementById('screen-entry'),
   guess: document.getElementById('screen-guess'),
@@ -52,6 +54,7 @@ const el = {
   // Home
   btnShowCreate: document.getElementById('btn-show-create'),
   btnShowJoin: document.getElementById('btn-show-join'),
+  btnShowAi: document.getElementById('btn-show-ai'),
   btnHowToPlay: document.getElementById('btn-how-to-play'),
 
   // Create
@@ -59,6 +62,13 @@ const el = {
   createName: document.getElementById('create-name'),
   createError: document.getElementById('create-error'),
   btnCreateBack: document.getElementById('btn-create-back'),
+
+  // Play with AI
+  aiSetupForm: document.getElementById('ai-setup-form'),
+  aiSetupName: document.getElementById('ai-setup-name'),
+  aiSetupError: document.getElementById('ai-setup-error'),
+  difficultyBtns: document.querySelectorAll('.difficulty-btn'),
+  btnAiSetupBack: document.getElementById('btn-ai-setup-back'),
 
   // Join
   joinForm: document.getElementById('join-form'),
@@ -352,6 +362,12 @@ function handleServerMessage(event) {
 function onRoomCreated(msg) {
   mySlot = 'player1';
   roomCode = msg.code;
+
+  if (msg.isAI) {
+    // No one to wait for — start_entry arrives immediately and takes over the screen.
+    return;
+  }
+
   el.waitingTitle.textContent = 'Waiting for Opponent';
   el.waitingRoomCodeBox.hidden = false;
   el.waitingRoomCode.textContent = roomCode;
@@ -398,7 +414,7 @@ function onStartGuess(msg) {
   guessFirstWords = msg.firstWords;
   guessAnswers = guessFirstWords.map(() => '');
   guessWordIndex = 0;
-  guessSecondsPerWord = msg.secondsPerWord || 5;
+  guessSecondsPerWord = msg.secondsPerWord || 10;
 
   el.guessOwnerName.textContent = `${msg.opponentName}'s`;
   updateHud(el.guessHudRound, el.guessHudP1, el.guessHudP2);
@@ -720,9 +736,21 @@ el.btnShowJoin.addEventListener('click', () => {
   el.joinError.textContent = '';
   showScreen('join');
 });
+el.btnShowAi.addEventListener('click', () => {
+  el.aiSetupError.textContent = '';
+  showScreen('aiSetup');
+});
 el.btnHowToPlay.addEventListener('click', () => openModal(el.modalHowToPlay));
 el.btnCreateBack.addEventListener('click', () => showScreen('home'));
 el.btnJoinBack.addEventListener('click', () => showScreen('home'));
+el.btnAiSetupBack.addEventListener('click', () => showScreen('home'));
+
+el.difficultyBtns.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    selectedDifficulty = btn.dataset.difficulty;
+    el.difficultyBtns.forEach((b) => b.classList.toggle('active', b === btn));
+  });
+});
 
 el.btnCloseHowToPlay.addEventListener('click', () => closeModal(el.modalHowToPlay));
 el.btnCancelReset.addEventListener('click', () => closeModal(el.modalConfirmReset));
@@ -761,6 +789,13 @@ el.joinForm.addEventListener('submit', (e) => {
   }
   el.joinError.textContent = '';
   connectSocket(() => sendMessage('join_room', { name, code }));
+});
+
+el.aiSetupForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = el.aiSetupName.value;
+  el.aiSetupError.textContent = '';
+  connectSocket(() => sendMessage('create_ai_game', { name, difficulty: selectedDifficulty }));
 });
 
 el.joinCode.addEventListener('input', () => {

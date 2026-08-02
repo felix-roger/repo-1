@@ -1,16 +1,25 @@
 'use strict';
 
+require('dotenv').config();
+
 const http = require('http');
 const path = require('path');
 const express = require('express');
 const { WebSocketServer, WebSocket } = require('ws');
+const { normalizeWhitespace, sanitizeWordSets } = require('./wordValidation');
+const { generateAIPhrases, generateAIGuesses } = require('./ai');
 
 const TOTAL_ROUNDS = 5;
-const MAX_WORD_SETS = 3;
+const AI_TOTAL_ROUNDS = 1;
 const ENTRY_TIME_SECONDS = 180;
-const GUESS_SECONDS_PER_WORD = 5;
+const GUESS_SECONDS_PER_WORD = 10;
 const TIMEOUT_GRACE_MS = 5000;
-const PHRASE_PATTERN = /^[A-Za-z'-]+$/;
+const AI_DIFFICULTIES = ['easy', 'medium', 'hard'];
+const AI_NAME_BY_DIFFICULTY = {
+  easy: 'AI Opponent (Easy)',
+  medium: 'AI Opponent (Medium)',
+  hard: 'AI Opponent (Hard)'
+};
 
 const app = express();
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -20,16 +29,6 @@ const wss = new WebSocketServer({ server });
 
 /** roomCode -> room state. Everything secret (second words, in-progress guesses) lives only here. */
 const rooms = new Map();
-
-function normalizeWhitespace(str) {
-  return String(str || '').trim().replace(/\s+/g, ' ');
-}
-
-function validateSingleWord(raw) {
-  const cleaned = normalizeWhitespace(raw);
-  if (!cleaned || cleaned.includes(' ') || !PHRASE_PATTERN.test(cleaned)) return null;
-  return cleaned.toUpperCase();
-}
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous O/0/I/1
@@ -42,6 +41,10 @@ function generateRoomCode() {
 
 function otherSlot(slot) {
   return slot === 'player1' ? 'player2' : 'player1';
+}
+
+function aiDisplayName(difficulty) {
+  return AI_NAME_BY_DIFFICULTY[difficulty] || AI_NAME_BY_DIFFICULTY.medium;
 }
 
 function send(ws, type, payload) {
@@ -64,23 +67,11 @@ function roomNames(room) {
   return { player1: room.players.player1.name, player2: room.players.player2.name };
 }
 
-function sanitizeWordSets(rawWordSets) {
-  const result = [];
-  if (!Array.isArray(rawWordSets)) return result;
-  for (const entry of rawWordSets.slice(0, MAX_WORD_SETS)) {
-    if (!entry) continue;
-    const first = validateSingleWord(entry.first);
-    const second = validateSingleWord(entry.second);
-    if (first && second) result.push({ first, second });
-  }
-  return result;
-}
-
-function createRoom() {
+function createRoom(totalRounds = TOTAL_ROUNDS) {
   const code = generateRoomCode();
   const room = {
     code,
-    totalRounds: TOTAL_ROUNDS,
+    totalRounds,
     currentRound: 1,
     scores: { player1: 0, player2: 0 },
     players: {
@@ -92,7 +83,10 @@ function createRoom() {
     guess: null,
     entryTimer: null,
     guessTimers: { player1: null, player2: null },
-    advancing: false
+    advancing: false,
+    isAI: false,
+    aiDifficulty: null,
+    aiUsedPhrases: []
   };
   rooms.set(code, room);
   return room;
@@ -115,6 +109,10 @@ function startEntryPhase(room) {
     scores: room.scores,
     names: roomNames(room)
   });
+
+  if (room.isAI) {
+    runAIEntry(room);
+  }
 }
 
 function forceFinalizeEntry(room) {
@@ -156,6 +154,28 @@ function startGuessPhase(room) {
       firstWords: room.entry[otherSlot(slot)].wordSets.map((w) => w.first)
     });
   });
+
+  if (room.isAI) {
+    runAIGuess(room);
+  }
+}
+
+async function runAIEntry(room) {
+  const wordSets = await generateAIPhrases(room.aiDifficulty, room.aiUsedPhrases);
+  if (!rooms.has(room.code) || room.phase !== 'entry' || room.entry.player2.submitted) return;
+  room.aiUsedPhrases.push(...wordSets);
+  room.entry.player2.submitted = true;
+  room.entry.player2.wordSets = wordSets;
+  maybeStartGuessPhase(room);
+}
+
+async function runAIGuess(room) {
+  const firstWords = room.entry.player1.wordSets.map((w) => w.first);
+  const guesses = await generateAIGuesses(firstWords, room.aiDifficulty);
+  if (!rooms.has(room.code) || room.phase !== 'guess' || room.guess.player2.submitted) return;
+  room.guess.player2.submitted = true;
+  room.guess.player2.guesses = guesses;
+  maybeComputeResults(room);
 }
 
 function forceFinalizeGuessSlot(room, slot) {
@@ -262,7 +282,23 @@ wss.on('connection', (ws) => {
       room.players.player1 = { ws, name, connected: true };
       ws.roomCode = room.code;
       ws.slot = 'player1';
-      send(ws, 'room_created', { code: room.code, you: 'player1', name });
+      send(ws, 'room_created', { code: room.code, you: 'player1', name, isAI: false });
+      return;
+    }
+
+    if (type === 'create_ai_game') {
+      const difficulty = AI_DIFFICULTIES.includes(msg.difficulty) ? msg.difficulty : 'medium';
+      const room = createRoom(AI_TOTAL_ROUNDS);
+      const name = normalizeWhitespace(msg.name).slice(0, 20) || 'Player 1';
+      room.players.player1 = { ws, name, connected: true };
+      room.players.player2 = { ws: null, name: aiDisplayName(difficulty), connected: true };
+      room.isAI = true;
+      room.aiDifficulty = difficulty;
+      ws.roomCode = room.code;
+      ws.slot = 'player1';
+
+      send(ws, 'room_created', { code: room.code, you: 'player1', name, isAI: true });
+      startEntryPhase(room);
       return;
     }
 

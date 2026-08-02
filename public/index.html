@@ -18,8 +18,35 @@
       <div class="button-stack">
         <button class="btn btn-primary" id="btn-show-create">Create Game</button>
         <button class="btn btn-secondary" id="btn-show-join">Join Game</button>
+        <button class="btn btn-secondary" id="btn-show-ai">Play with AI</button>
         <button class="btn btn-tertiary" id="btn-how-to-play">How to Play</button>
       </div>
+    </div>
+  </section>
+
+  <!-- PLAY WITH AI SETUP SCREEN -->
+  <section id="screen-ai-setup" class="screen" aria-labelledby="ai-setup-title">
+    <div class="card">
+      <h2 id="ai-setup-title" class="screen-title">Play with AI</h2>
+      <p class="hint">Pick a name and a difficulty. The game starts right away — no opponent to wait for.</p>
+
+      <form id="ai-setup-form" novalidate>
+        <div class="field">
+          <label for="ai-setup-name">Your Name</label>
+          <input type="text" id="ai-setup-name" autocomplete="off" maxlength="20" placeholder="Your name" />
+        </div>
+        <div class="field">
+          <span id="ai-difficulty-label">Difficulty</span>
+          <div class="difficulty-row" role="group" aria-labelledby="ai-difficulty-label">
+            <button type="button" class="btn btn-secondary difficulty-btn" data-difficulty="easy">Easy</button>
+            <button type="button" class="btn btn-secondary difficulty-btn active" data-difficulty="medium">Medium</button>
+            <button type="button" class="btn btn-secondary difficulty-btn" data-difficulty="hard">Hard</button>
+          </div>
+        </div>
+        <p id="ai-setup-error" class="error-message" role="alert" aria-live="polite"></p>
+        <button type="submit" class="btn btn-primary btn-full">Start Game</button>
+        <button type="button" class="btn btn-tertiary btn-full" id="btn-ai-setup-back">Back</button>
+      </form>
     </div>
   </section>
 
@@ -139,7 +166,7 @@
   <!-- GUESS SCREEN -->
   <section id="screen-guess" class="screen" aria-labelledby="guess-title">
     <div class="game-hud">
-      <div class="hud-clock" id="guess-clock">Clock : 00:05</div>
+      <div class="hud-clock" id="guess-clock">Clock : 00:10</div>
       <div class="hud-score" aria-label="Scoreboard">
         <span class="hud-score-title">Score</span>
         <span class="hud-round" id="guess-hud-round">Round 1</span>
@@ -150,7 +177,7 @@
     <div class="card">
       <h2 id="guess-title" class="screen-title">Guess <span id="guess-owner-name">your opponent's</span> phrases</h2>
       <span class="round-indicator-pill" id="guess-word-progress">Word 1 of 3</span>
-      <p class="hint">You have 5 seconds to guess each word.</p>
+      <p class="hint">You have 10 seconds to guess each word.</p>
 
       <form id="guess-form" novalidate>
         <div class="guess-list" id="guess-grid"></div>
