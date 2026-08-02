@@ -1,7 +1,7 @@
 {
   "name": "the-final-word",
   "version": "1.0.0",
-  "description": "THE FINAL WORD - a two-player word guessing duel, playable over the internet.",
+  "description": "THE FINAL WORD - a two-player word guessing duel",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js"
